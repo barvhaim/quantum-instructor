@@ -1,0 +1,105 @@
+import asyncio
+import logging
+import os
+import sys
+import traceback
+from typing import Any
+
+from dotenv import load_dotenv
+from mcp import StdioServerParameters
+from mcp.client.stdio import stdio_client
+
+from beeai_framework.agents import AgentExecutionConfig
+from beeai_framework.agents.react import ReActAgent
+from beeai_framework.backend import ChatModel, ChatModelParameters
+from beeai_framework.emitter import Emitter, EventMeta
+from beeai_framework.errors import FrameworkError
+from beeai_framework.logger import Logger
+from beeai_framework.memory import TokenMemory
+from beeai_framework.tools import AnyTool
+from beeai_framework.tools.mcp import MCPTool
+from helpers.io import ConsoleReader
+
+# Load environment variables
+load_dotenv()
+
+reader = ConsoleReader()
+
+# Configure logging - using DEBUG instead of trace
+logger = Logger("app", level=logging.DEBUG)
+
+# Create server parameters for stdio connection to qiskit-mcp-server
+server_params = StdioServerParameters(
+    command="uv",
+    args=[
+        "--directory",
+        "./qiskit-mcp-server",
+        "run",
+        "main.py"
+    ],
+    env={
+        "PATH": os.getenv("PATH", default=""),
+    },
+)
+
+async def create_quantum_agent() -> ReActAgent:
+    """Create and configure the quantum agent with Qiskit MCP tools and LLM"""
+
+    # Configure LLM - using a model suitable for quantum computing tasks
+    llm = ChatModel.from_name(
+        "ollama:llama3.1",
+        ChatModelParameters(temperature=0),
+    )
+
+    # Configure Qiskit MCP tools
+    qiskit_tools = await MCPTool.from_client(stdio_client(server_params))
+    tools: list[AnyTool] = qiskit_tools
+
+    # Create agent with memory and quantum tools
+    agent = ReActAgent(llm=llm, tools=tools, memory=TokenMemory(llm))
+    return agent
+
+
+def process_agent_events(data: Any, event: EventMeta) -> None:
+    """Process agent events and log appropriately"""
+
+    if event.name == "error":
+        reader.write("Agent 🤖 : ", FrameworkError.ensure(data.error).explain())
+    elif event.name == "retry":
+        reader.write("Agent 🤖 : ", "retrying the action...")
+    elif event.name == "update":
+        reader.write(f"Agent({data.update.key}) 🤖 : ", data.update.parsed_value)
+    elif event.name == "start":
+        reader.write("Agent 🤖 : ", "starting new iteration")
+    elif event.name == "success":
+        reader.write("Agent 🤖 : ", "success")
+    else:
+        print(event.path)
+
+
+def observer(emitter: Emitter) -> None:
+    emitter.on("*.*", process_agent_events)
+
+async def main() -> None:
+    """Main application loop for quantum computing tasks"""
+
+    # Create quantum agent
+    agent = await create_quantum_agent()
+
+    # Main interaction loop with user input
+    for prompt in reader:
+        # Run agent with the quantum prompt
+        response = await agent.run(
+            prompt=prompt,
+            execution=AgentExecutionConfig(max_retries_per_step=3, total_max_retries=10, max_iterations=20),
+        ).observe(observer)
+
+        reader.write("Quantum Agent 🔬 : ", response.result.text)
+
+
+if __name__ == "__main__":
+    try:
+        asyncio.run(main())
+    except FrameworkError as e:
+        traceback.print_exc()
+        sys.exit(e.explain())

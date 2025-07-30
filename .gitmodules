@@ -1,0 +1,3 @@
+[submodule "qiskit-mcp-server"]
+	path = qiskit-mcp-server
+	url = https://github.com/barvhaim/qiskit-mcp-server.git
