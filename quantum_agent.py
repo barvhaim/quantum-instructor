@@ -25,8 +25,8 @@ load_dotenv()
 
 reader = ConsoleReader()
 
-# Configure logging - using DEBUG instead of trace
-logger = Logger("app", level=logging.DEBUG)
+# Configure logging - reduce verbosity
+logger = Logger("app", level=logging.WARNING)
 
 # Create server parameters for stdio connection to qiskit-mcp-server
 server_params = StdioServerParameters(
@@ -57,20 +57,17 @@ async def create_quantum_agent() -> ReActAgent:
 
 
 def process_agent_events(data: Any, event: EventMeta) -> None:
-    """Process agent events and log appropriately"""
+    """Process agent events and log appropriately - filtered for essential events only"""
 
+    # Only show important events, filter out verbose debug events
     if event.name == "error":
         reader.write("Agent 🤖 : ", FrameworkError.ensure(data.error).explain())
     elif event.name == "retry":
         reader.write("Agent 🤖 : ", "retrying the action...")
-    elif event.name == "update":
+    elif event.name == "update" and data.update.key in ["thought", "final_answer"]:
+        # Only show thoughts and final answers, not all partial updates
         reader.write(f"Agent({data.update.key}) 🤖 : ", data.update.parsed_value)
-    elif event.name == "start":
-        reader.write("Agent 🤖 : ", "starting new iteration")
-    elif event.name == "success":
-        reader.write("Agent 🤖 : ", "success")
-    else:
-        print(event.path)
+    # Filter out: start, success, new_token, partial_update, finish events
 
 
 def observer(emitter: Emitter) -> None:
