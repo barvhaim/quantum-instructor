@@ -31,16 +31,12 @@ logger = Logger("app", level=logging.DEBUG)
 # Create server parameters for stdio connection to qiskit-mcp-server
 server_params = StdioServerParameters(
     command="uv",
-    args=[
-        "--directory",
-        "./qiskit-mcp-server",
-        "run",
-        "main.py"
-    ],
+    args=["--directory", "./qiskit-mcp-server", "run", "main.py"],
     env={
         "PATH": os.getenv("PATH", default=""),
     },
 )
+
 
 async def create_quantum_agent() -> ReActAgent:
     """Create and configure the quantum agent with Qiskit MCP tools and LLM"""
@@ -80,6 +76,7 @@ def process_agent_events(data: Any, event: EventMeta) -> None:
 def observer(emitter: Emitter) -> None:
     emitter.on("*.*", process_agent_events)
 
+
 async def main() -> None:
     """Main application loop for quantum computing tasks"""
 
@@ -91,7 +88,9 @@ async def main() -> None:
         # Run agent with the quantum prompt
         response = await agent.run(
             prompt=prompt,
-            execution=AgentExecutionConfig(max_retries_per_step=3, total_max_retries=10, max_iterations=20),
+            execution=AgentExecutionConfig(
+                max_retries_per_step=3, total_max_retries=10, max_iterations=20
+            ),
         ).observe(observer)
 
         reader.write("Quantum Agent 🔬 : ", response.result.text)
