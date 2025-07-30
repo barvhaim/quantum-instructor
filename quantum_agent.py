@@ -43,7 +43,7 @@ async def create_quantum_agent() -> ReActAgent:
 
     # Configure LLM - using a model suitable for quantum computing tasks
     llm = ChatModel.from_name(
-        "ollama:llama3.1",
+        "watsonx:meta-llama/llama-3-3-70b-instruct",
         ChatModelParameters(temperature=0),
     )
 
@@ -57,17 +57,14 @@ async def create_quantum_agent() -> ReActAgent:
 
 
 def process_agent_events(data: Any, event: EventMeta) -> None:
-    """Process agent events and log appropriately - filtered for essential events only"""
+    """Process agent events and log appropriately"""
 
-    # Only show important events, filter out verbose debug events
     if event.name == "error":
         reader.write("Agent 🤖 : ", FrameworkError.ensure(data.error).explain())
     elif event.name == "retry":
         reader.write("Agent 🤖 : ", "retrying the action...")
-    elif event.name == "update" and data.update.key in ["thought", "final_answer"]:
-        # Only show thoughts and final answers, not all partial updates
+    elif event.name == "update":
         reader.write(f"Agent({data.update.key}) 🤖 : ", data.update.parsed_value)
-    # Filter out: start, success, new_token, partial_update, finish events
 
 
 def observer(emitter: Emitter) -> None:

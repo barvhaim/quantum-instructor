@@ -52,13 +52,14 @@ uv run quantum_agent.py
 
 Once you start the quantum agent, you can ask natural language questions like:
 
-- "Create a Bell state circuit with 2 qubits"
+- "Create a Bell state circuit with 2 qubits and visualize it"
+- "Run a quantum circuit with 3 qubits and measure the results"
 - "Build a Grover search algorithm for 3 qubits"
 - "Analyze the entanglement in my quantum circuit"
 - "Optimize my circuit and show performance improvements"
 - "Create a variational quantum circuit for machine learning"
 - "Implement a 4-qubit Quantum Fourier Transform"
-- "Visualize my quantum circuit"
+- "Show me the circuit diagram for a 4-qubit GHZ state"
 
 ## Dependencies
 
